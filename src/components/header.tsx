@@ -20,9 +20,9 @@ export function Header() {
         <div className="container flex h-16 items-center justify-between px-4 sm:px-6 lg:px-10">
           <div className="flex items-center gap-2">
             <div className="flex size-8 items-center justify-center rounded-lg bg-primary">
-              <span className="font-bold text-primary-foreground text-sm">MD</span>
+              <span className="font-bold text-primary-foreground text-sm">B</span>
             </div>
-            <span className="font-semibold text-lg">Markdown to PDF Studio</span>
+            <span className="font-semibold text-lg">Binderly</span>
           </div>
           <div className="size-9" />
         </div>
@@ -35,9 +35,9 @@ export function Header() {
       <div className="container flex h-16 items-center justify-between px-4 sm:px-6 lg:px-10">
         <div className="flex items-center gap-2">
           <div className="flex size-8 items-center justify-center rounded-lg bg-primary">
-            <span className="font-bold text-primary-foreground text-sm">MD</span>
+            <span className="font-bold text-primary-foreground text-sm">B</span>
           </div>
-          <span className="font-semibold text-lg">Markdown to PDF Studio</span>
+          <span className="font-semibold text-lg">Binderly</span>
         </div>
         <Button
           variant="ghost"

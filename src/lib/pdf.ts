@@ -7,7 +7,7 @@ import { marked } from "marked";
 import puppeteer from "puppeteer";
 import hljs from "highlight.js";
 
-const DEFAULT_TITLE = "Markdown to PDF";
+const DEFAULT_TITLE = "Binderly";
 
 export type RenderMarkdownToPdfOptions = {
   markdown: string;

@@ -1,5 +1,5 @@
 {
-  "name": "markdown-to-pdf-studio",
+  "name": "binderly",
   "version": "0.0.1",
   "private": true,
   "description": "Live Markdown editing, custom CSS theming, and instant PDF export powered by Next.js",

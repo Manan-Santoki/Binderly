@@ -22,7 +22,7 @@ export function Footer() {
             <Github className="size-5" />
           </a>
           <span className="text-muted-foreground text-sm">
-            © {currentYear} Markdown to PDF Studio
+            © {currentYear} Binderly
           </span>
         </div>
       </div>

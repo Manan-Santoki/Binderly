@@ -12,8 +12,8 @@ import "@/app/globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Markdown to PDF Studio",
-    template: "%s | Markdown to PDF Studio",
+    default: "Binderly",
+    template: "%s | Binderly",
   },
   description:
     "A professional tool for converting Markdown to PDF. Features live preview, custom CSS styling, dark mode, and instant export. Perfect for documentation, reports, and resumes.",
@@ -38,22 +38,22 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "https://markdown2pdf.manansantoki.xyz",
-    title: "Markdown to PDF Studio",
+    title: "Binderly",
     description:
       "Create beautiful PDFs from Markdown with live preview and custom styling.",
-    siteName: "Markdown to PDF Studio",
+    siteName: "Binderly",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Markdown to PDF Studio Preview",
+        alt: "Binderly Preview",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Markdown to PDF Studio",
+    title: "Binderly",
     description:
       "Convert Markdown to pixel-perfect PDFs with custom themes and live preview.",
     images: ["/og-image.png"],

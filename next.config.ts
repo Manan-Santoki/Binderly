@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ["codeserver-3000.msantoki.com"],
   async headers() {
     return [
       {

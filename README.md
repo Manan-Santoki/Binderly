@@ -1,4 +1,4 @@
-# Markdown to PDF Studio
+# Binderly
 
 A modern web application for converting Markdown to beautifully styled PDFs with live preview, custom theming, and instant export.
 
@@ -26,7 +26,7 @@ A modern web application for converting Markdown to beautifully styled PDFs with
 ```bash
 # Clone the repository
 git clone <your-repo-url>
-cd markdown-to-pdf-studio
+cd binderly
 
 # Install dependencies
 pnpm install

@@ -198,7 +198,7 @@ export function PdfWorkbench() {
       <section className="flex flex-col items-center gap-5 text-center">
         <div className="space-y-3">
           <p className="inline-flex items-center gap-2 rounded-full border border-border/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            <FileText className="size-3.5" /> Markdown to PDF studio
+            <FileText className="size-3.5" /> Binderly
           </p>
           <h1 className="text-balance font-serif text-4xl font-semibold tracking-tight sm:text-5xl">
             Live Markdown preview with pixel-perfect PDF export

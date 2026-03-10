@@ -189,6 +189,153 @@ const sharedCss = `
 `;
 
 const themeTokens = {
+  github: {
+    label: "GitHub README",
+    description: "Primer-inspired Markdown styling that matches GitHub's rendered docs.",
+    vars: `
+.md-theme {
+  --md-bg: #ffffff;
+  --md-text: #1f2328;
+  --md-heading: #1f2328;
+  --md-muted: #656d76;
+  --md-border: #d0d7de;
+  --md-code-bg: #eff2f5;
+  --md-code-text: #1f2328;
+  --md-link: #0969da;
+  --md-blockquote-bg: transparent;
+  --md-blockquote-border: #d0d7de;
+  --md-font-stack: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+  --md-letter-spacing: 0;
+  font-size: 16px;
+  line-height: 1.5;
+  padding: 32px 40px;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+.md-theme h1,
+.md-theme h2 {
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--md-border);
+}
+
+.md-theme h1 {
+  margin: 0 0 16px;
+  font-size: 2em;
+}
+
+.md-theme h2 {
+  font-size: 1.5em;
+}
+
+.md-theme h3 {
+  font-size: 1.25em;
+}
+
+.md-theme h4 {
+  font-size: 1em;
+}
+
+.md-theme h5 {
+  font-size: 0.875em;
+}
+
+.md-theme h6 {
+  font-size: 0.85em;
+  color: var(--md-muted);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.md-theme p,
+.md-theme ul,
+.md-theme ol,
+.md-theme blockquote,
+.md-theme table,
+.md-theme pre {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.md-theme ul,
+.md-theme ol {
+  margin-left: 0;
+  padding-left: 2em;
+}
+
+.md-theme li + li {
+  margin-top: 0.25em;
+}
+
+.md-theme blockquote {
+  margin-left: 0;
+  padding: 0 1em;
+  border-left: 0.25em solid var(--md-blockquote-border);
+  border-radius: 0;
+  color: var(--md-muted);
+  font-style: normal;
+}
+
+.md-theme code {
+  border-radius: 6px;
+  padding: 0.2em 0.4em;
+  font-size: 85%;
+}
+
+.md-theme pre {
+  border-radius: 6px;
+  padding: 16px;
+  font-size: 85%;
+  line-height: 1.45;
+}
+
+.md-theme pre code {
+  font-size: 100%;
+}
+
+.md-theme table {
+  display: table;
+  width: 100%;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+}
+
+.md-theme thead {
+  background: transparent;
+}
+
+.md-theme tr {
+  background: var(--md-bg);
+  border-top: 1px solid var(--md-border);
+}
+
+.md-theme tr:nth-child(2n) {
+  background: #f6f8fa;
+}
+
+.md-theme th,
+.md-theme td {
+  padding: 6px 13px;
+}
+
+.md-theme hr {
+  height: 0.25em;
+  margin: 24px 0;
+  background: var(--md-border);
+  border: 0;
+}
+
+.md-theme a {
+  font-weight: 500;
+}
+
+.md-theme img,
+.md-theme video {
+  border-radius: 6px;
+}
+`,
+  },
   serif: {
     label: "Editorial Serif",
     description: "Magazine-inspired layout with warm neutrals for long-form reading.",
@@ -288,7 +435,7 @@ export function getHighlightThemeForDocumentTheme(themeKey: ThemeKey): "github-l
   if (themeKey === "midnight") {
     return "github-dark";
   }
-  // Serif and neutral themes have light backgrounds, use light syntax highlighting
+  // All light themes, including GitHub, use the light syntax highlighting palette
   return "github-light";
 }
 
@@ -467,7 +614,7 @@ a:hover {
 }
 `;
 
-  const themeVars = themeTokens[key].vars.replace('.md-theme', 'body');
+  const themeVars = themeTokens[key].vars.replaceAll(".md-theme", "body");
 
   return [sharedCssForPdf, themeVars, customCss?.trim()].filter(Boolean).join("\n\n");
 }
