@@ -11,13 +11,12 @@ import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import { toast } from "sonner";
 import {
   ArrowDownToLine,
-  FileText,
   ListTree,
   PanelLeft,
   RefreshCw,
+  Share2,
   UploadCloud,
 } from "lucide-react";
-import { ModeToggle } from "@/components/mode-toggle";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -316,51 +315,140 @@ export function PdfWorkbench() {
     setCustomCss("");
     setTheme("serif");
     setMetadata(defaultMetadata);
-    setMetadata(defaultMetadata);
     setFileName("strategy-brief");
     setRoundedCorners(false);
   }, []);
 
+  const [isSharing, setIsSharing] = useState(false);
+
+  const handleShare = useCallback(async () => {
+    if (!markdown.trim()) {
+      toast.error("Add some Markdown before sharing");
+      return;
+    }
+    setIsSharing(true);
+    try {
+      const response = await fetch("/api/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          markdown,
+          theme,
+          customCss,
+          metadata,
+          roundedCorners,
+          showToc,
+        }),
+      });
+      if (!response.ok) {
+        const data = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error ?? "Share failed");
+      }
+      const { id } = (await response.json()) as { id: string };
+      const url = `${window.location.origin}/v/${id}`;
+      try {
+        await navigator.clipboard.writeText(url);
+        toast.success("Share link copied to clipboard");
+      } catch {
+        toast.success(`Share link: ${url}`);
+      }
+    } catch (error) {
+      console.error(error);
+      const message =
+        error instanceof Error ? error.message : "Unable to create share link";
+      toast.error(message);
+    } finally {
+      setIsSharing(false);
+    }
+  }, [customCss, markdown, metadata, roundedCorners, showToc, theme]);
+
+  // One-shot import from /v/[id]'s "Open in editor" button.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let raw: string | null = null;
+    try {
+      raw = sessionStorage.getItem("binderly-import-share");
+    } catch {
+      return;
+    }
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw) as {
+        markdown?: string;
+        theme?: string;
+        customCss?: string;
+        metadata?: { title?: string; author?: string };
+        roundedCorners?: boolean;
+        showToc?: boolean;
+      };
+      if (parsed.markdown) setMarkdown(parsed.markdown);
+      if (parsed.theme) setTheme(parsed.theme as ThemeKey);
+      if (typeof parsed.customCss === "string") setCustomCss(parsed.customCss);
+      if (parsed.metadata) {
+        setMetadata({
+          title: parsed.metadata.title ?? "",
+          author: parsed.metadata.author ?? "",
+        });
+      }
+      if (typeof parsed.roundedCorners === "boolean") {
+        setRoundedCorners(parsed.roundedCorners);
+      }
+      if (typeof parsed.showToc === "boolean") setShowToc(parsed.showToc);
+      toast.success("Imported shared document");
+    } catch {
+      // fall through
+    } finally {
+      try {
+        sessionStorage.removeItem("binderly-import-share");
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
+
   return (
-    <div className="flex w-full flex-col gap-8 px-4 py-10 sm:px-6 lg:px-10">
-      <section className="flex flex-col items-center gap-5 text-center">
-        <div className="space-y-3">
-          <p className="inline-flex items-center gap-2 rounded-full border border-border/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            <FileText className="size-3.5" /> Binderly
-          </p>
-          <h1 className="text-balance font-serif text-4xl font-semibold tracking-tight sm:text-5xl">
-            Live Markdown preview with pixel-perfect PDF export
-          </h1>
-          <p className="text-balance text-muted-foreground text-lg">
-            Compose in Markdown, apply curated typography themes or drop in brand CSS,
-            then export a print-ready PDF without leaving the browser.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          <Button onClick={handleDownload} disabled={isExporting} size="lg">
-            <ArrowDownToLine className="size-4" />
-            {isExporting ? "Preparing PDF" : "Download PDF"}
-          </Button>
+    <div className="flex w-full flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowSidebar(!showSidebar)}
+          aria-label={showSidebar ? "Hide controls" : "Show controls"}
+        >
+          <PanelLeft className="size-4" />
+        </Button>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
           <Button
             type="button"
             variant="ghost"
-            size="lg"
+            size="sm"
             onClick={resetToSample}
             disabled={isExporting}
           >
-            <RefreshCw className="size-4" /> Reset to sample
+            <RefreshCw className="size-4" /> Reset
           </Button>
           <Button
             type="button"
-            variant="ghost"
-            size="lg"
-            onClick={() => setShowSidebar(!showSidebar)}
+            variant="outline"
+            size="sm"
+            onClick={handleShare}
+            disabled={isSharing || isExporting}
           >
-            <PanelLeft className="size-4" />
-            {showSidebar ? "Hide controls" : "Show controls"}
+            <Share2 className="size-4" />
+            {isSharing ? "Creating link" : "Share"}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleDownload}
+            disabled={isExporting}
+          >
+            <ArrowDownToLine className="size-4" />
+            {isExporting ? "Preparing PDF" : "Download PDF"}
           </Button>
         </div>
-      </section>
+      </div>
 
       <div className="flex items-start">
         <div
