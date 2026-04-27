@@ -79,6 +79,12 @@ ${alertCss}
   overflow-x: auto;
 }
 .mermaid-diagram svg { max-width: 100%; height: auto; }
+
+/* Offset anchor jumps so headings clear the sticky toolbar above. */
+.markdown-body :is(h1, h2, h3, h4, h5, h6),
+.md-theme :is(h1, h2, h3, h4, h5, h6) {
+  scroll-margin-top: 80px;
+}
 `;
 
 export type SharedDocPayload = {
