@@ -1,13 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactElement } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { remarkAlert } from "remark-github-blockquote-alert";
 import rehypeRaw from "rehype-raw";
+import rehypeSlug from "rehype-slug";
+import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import { toast } from "sonner";
 import {
   ArrowDownToLine,
   FileText,
+  ListTree,
   PanelLeft,
   RefreshCw,
   UploadCloud,
@@ -39,8 +44,72 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { buildThemeCss, themeOptions, type ThemeKey } from "@/lib/themes";
+import {
+  buildThemeCss,
+  getMermaidThemeForDocumentTheme,
+  getWrapperClass,
+  themeOptions,
+  type ThemeKey,
+} from "@/lib/themes";
+import { alertCss } from "@/lib/alert-css";
 import { sampleMarkdown } from "@/lib/sample-markdown";
+import { MermaidDiagram } from "./mermaid-diagram";
+import { CodeBlock } from "./code-block";
+import { TableOfContents } from "./toc";
+
+const previewExtraCss = `
+${alertCss}
+
+.code-block-wrapper {
+  margin: 16px 0;
+  border: 1px solid var(--md-border, #d0d7de);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--md-code-bg, #f6f8fa);
+}
+.code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: color-mix(in srgb, currentColor 6%, transparent);
+  border-bottom: 1px solid var(--md-border, #d0d7de);
+  font-size: 12px;
+  line-height: 1;
+}
+.code-block-lang {
+  text-transform: lowercase;
+  letter-spacing: 0.04em;
+  color: var(--md-muted, #656d76);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 500;
+}
+.code-block-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--md-muted, #656d76);
+  font: inherit;
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+.code-block-copy:hover {
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  color: inherit;
+}
+.code-block-pre {
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 12px 16px !important;
+  overflow-x: auto;
+}
+.mermaid-diagram svg { max-width: 100%; height: auto; }
+`;
 
 const defaultMetadata = {
   title: "Strategy Brief",
@@ -68,6 +137,13 @@ export function PdfWorkbench() {
     }
     return true;
   });
+  const [showToc, setShowToc] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("show-toc");
+      return saved !== null ? saved === "true" : true;
+    }
+    return true;
+  });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -80,26 +156,72 @@ export function PdfWorkbench() {
     localStorage.setItem("sidebar-visible", String(showSidebar));
   }, [showSidebar]);
 
+  useEffect(() => {
+    localStorage.setItem("show-toc", String(showToc));
+  }, [showToc]);
+
   const stats = useMemo(() => {
     const trimmed = markdown.trim();
     const words = trimmed ? trimmed.split(/\s+/).length : 0;
     return { characters: markdown.length, words };
   }, [markdown]);
 
+  const wrapperClass = useMemo(() => getWrapperClass(theme), [theme]);
+  const mermaidTheme = useMemo(
+    () => getMermaidThemeForDocumentTheme(theme),
+    [theme],
+  );
+
   const previewCss = useMemo(() => {
     const baseCss = buildThemeCss(theme, customCss);
+    const extras = `\n${previewExtraCss}`;
     if (!roundedCorners) {
-      return `${baseCss}
+      const flatten = wrapperClass === "md-theme"
+        ? `
 .md-theme {
   border: none !important;
   border-radius: 0 !important;
   max-width: none !important;
   margin: 0 !important;
   width: 100% !important;
+}`
+        : `
+.markdown-body {
+  border: none !important;
+  border-radius: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+  width: 100% !important;
 }`;
+      return `${baseCss}${extras}${flatten}`;
     }
-    return baseCss;
-  }, [customCss, theme, roundedCorners]);
+    return `${baseCss}${extras}`;
+  }, [customCss, theme, roundedCorners, wrapperClass]);
+
+  const markdownComponents = useMemo(
+    () => ({
+      pre(props: { children?: React.ReactNode }) {
+        const child = props.children as ReactElement<{
+          className?: string;
+          children?: React.ReactNode;
+        }> | undefined;
+        const codeClass = child?.props?.className ?? "";
+        const codeText = String(child?.props?.children ?? "").replace(/\n$/, "");
+        const langMatch = /language-([\w-]+)/.exec(codeClass);
+        const lang = langMatch?.[1] ?? "";
+
+        if (lang === "mermaid") {
+          return <MermaidDiagram code={codeText} theme={mermaidTheme} />;
+        }
+        return (
+          <CodeBlock language={lang} code={codeText}>
+            {child}
+          </CodeBlock>
+        );
+      },
+    }),
+    [mermaidTheme],
+  );
 
   const sanitizeFileName = (value: string) =>
     value
@@ -152,6 +274,7 @@ export function PdfWorkbench() {
         fileName: sanitizeFileName(fileName),
         metadata,
         roundedCorners,
+        showToc,
       };
 
       const response = await fetch("/api/pdf", {
@@ -181,7 +304,7 @@ export function PdfWorkbench() {
     } finally {
       setIsExporting(false);
     }
-  }, [customCss, fileName, markdown, metadata, theme, roundedCorners]);
+  }, [customCss, fileName, markdown, metadata, theme, roundedCorners, showToc]);
 
   const resetToSample = useCallback(() => {
     setMarkdown(sampleMarkdown);
@@ -363,6 +486,30 @@ export function PdfWorkbench() {
 
             <Card>
               <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ListTree className="size-4" /> Outline
+                </CardTitle>
+                <CardDescription>
+                  Generated from your headings. Include in PDF when enabled.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between rounded-md border p-2.5">
+                  <Label htmlFor="show-toc" className="text-sm">
+                    Include in PDF
+                  </Label>
+                  <Switch
+                    id="show-toc"
+                    checked={showToc}
+                    onCheckedChange={setShowToc}
+                  />
+                </div>
+                <TableOfContents markdown={markdown} />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                 <CardTitle>Custom CSS</CardTitle>
                 <CardDescription>
                   Paste additional CSS tokens to align with a design system. They will
@@ -425,10 +572,15 @@ export function PdfWorkbench() {
                 <ScrollArea className="flex-1 min-w-0" horizontal>
                   <div className="px-6 py-6">
                     <style>{previewCss}</style>
-                    <div className="md-theme">
+                    <div className={wrapperClass}>
                       <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        rehypePlugins={[rehypeRaw]}
+                        remarkPlugins={[remarkGfm, remarkAlert]}
+                        rehypePlugins={[
+                          rehypeRaw,
+                          rehypeSlug,
+                          [rehypeAutolinkHeadings, { behavior: "wrap" }],
+                        ]}
+                        components={markdownComponents}
                       >
                         {markdown || "_Start typing to preview your document..._"}
                       </ReactMarkdown>

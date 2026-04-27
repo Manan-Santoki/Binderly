@@ -16,6 +16,7 @@ const PayloadSchema = z.object({
     })
     .optional(),
   roundedCorners: z.boolean().optional().default(false),
+  showToc: z.boolean().optional().default(true),
 });
 
 export const runtime = "nodejs";
@@ -36,7 +37,15 @@ export async function POST(request: Request) {
     );
   }
 
-  const { markdown, customCss, theme, fileName, metadata, roundedCorners } = parsed.data;
+  const {
+    markdown,
+    customCss,
+    theme,
+    fileName,
+    metadata,
+    roundedCorners,
+    showToc,
+  } = parsed.data;
   const resolvedTheme = isThemeKey(theme) ? theme : "serif";
 
   try {
@@ -46,6 +55,7 @@ export async function POST(request: Request) {
       customCss,
       metadata,
       roundedCorners,
+      showToc,
     });
 
     const suggestedName = `${fileName?.trim() || "markdown-document"}.pdf`;
