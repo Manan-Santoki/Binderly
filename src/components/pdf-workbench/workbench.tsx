@@ -213,6 +213,11 @@ export function PdfWorkbench() {
         if (lang === "mermaid") {
           return <MermaidDiagram code={codeText} theme={mermaidTheme} />;
         }
+        // Primer themes match GitHub's web rendering, which has no header chrome.
+        // Use the default <pre><code> so Primer's CSS owns the styling.
+        if (wrapperClass === "markdown-body") {
+          return <pre>{child}</pre>;
+        }
         return (
           <CodeBlock language={lang} code={codeText}>
             {child}
@@ -220,7 +225,7 @@ export function PdfWorkbench() {
         );
       },
     }),
-    [mermaidTheme],
+    [mermaidTheme, wrapperClass],
   );
 
   const sanitizeFileName = (value: string) =>

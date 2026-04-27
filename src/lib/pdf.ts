@@ -1,6 +1,6 @@
 // src/lib/pdf.ts
 import fs from "node:fs";
-import { createRequire } from "node:module";
+import path from "node:path";
 
 import GithubSlugger from "github-slugger";
 import { marked } from "marked";
@@ -32,15 +32,35 @@ export type RenderMarkdownToPdfOptions = {
   showToc?: boolean;
 };
 
-const requireForUmd = createRequire(import.meta.url);
-let mermaidUmdCache: string | null = null;
+// Resolve mermaid's UMD bundle from disk at runtime. We use process.cwd() rather than
+// import.meta.url / createRequire because Next.js bundles this file into .next/server/...
+// and rewrites import.meta.url, which previously caused EBADF on production builds.
+let mermaidScriptPathCache: string | null | undefined;
 
-function loadMermaidUmd(): string {
-  if (mermaidUmdCache) return mermaidUmdCache;
-  const mermaidPath = requireForUmd.resolve("mermaid/dist/mermaid.min.js");
-  mermaidUmdCache = fs.readFileSync(mermaidPath, "utf8");
-  return mermaidUmdCache;
+function findMermaidScriptPath(): string | null {
+  if (mermaidScriptPathCache !== undefined) return mermaidScriptPathCache;
+  const candidates = [
+    path.join(process.cwd(), "node_modules", "mermaid", "dist", "mermaid.min.js"),
+    path.join(process.cwd(), "..", "node_modules", "mermaid", "dist", "mermaid.min.js"),
+  ];
+  for (const candidate of candidates) {
+    try {
+      if (fs.statSync(candidate).isFile()) {
+        mermaidScriptPathCache = candidate;
+        return candidate;
+      }
+    } catch {
+      // not found at this path, try next
+    }
+  }
+  mermaidScriptPathCache = null;
+  return null;
 }
+
+// Whether the current render targets a Primer (`.markdown-body`) theme.
+// Read by the marked code renderer to decide whether to emit our custom
+// language-label/copy wrapper or stay native (matching GitHub's own rendering).
+let currentRenderIsPrimer = false;
 
 let markedConfigured = false;
 
@@ -57,9 +77,13 @@ function configureMarkedOnce() {
           // Use a <pre class="mermaid"> so mermaid.run() can find it.
           return `<pre class="mermaid">${escapeHtml(text)}</pre>\n`;
         }
-        const langLabel = language || "text";
         const escaped = escapeHtml(text);
         const langClass = language ? ` class="language-${language}"` : "";
+        if (currentRenderIsPrimer) {
+          // Match GitHub: native <pre><code> with no header chrome.
+          return `<pre><code${langClass}>${escaped}</code></pre>\n`;
+        }
+        const langLabel = language || "text";
         return `<div class="code-block-wrapper"><div class="code-block-header"><span class="code-block-lang">${escapeHtml(langLabel)}</span></div><pre class="code-block-pre"><code${langClass}>${escaped}</code></pre></div>\n`;
       },
     },
@@ -197,13 +221,15 @@ export async function renderMarkdownToPdf({
 }: RenderMarkdownToPdfOptions): Promise<Buffer> {
   configureMarkedOnce();
 
+  const wrapper = getWrapperClass(theme);
+  const isPrimer = wrapper === "markdown-body";
+
+  // Tell the (global) marked code renderer which mode to emit for this parse.
+  currentRenderIsPrimer = isPrimer;
   const rawHtml = await marked.parse(markdown);
   const { html: htmlWithIds, toc } = addHeadingIds(String(rawHtml));
   const tocHtml = showToc ? buildTocHtml(toc) : "";
   const htmlContent = `${tocHtml}${htmlWithIds}`;
-
-  const wrapper = getWrapperClass(theme);
-  const isPrimer = wrapper === "markdown-body";
 
   const highlightTheme = getHighlightThemeForDocumentTheme(theme);
   const hljsCss = await loadHljsCss(highlightTheme);
@@ -279,16 +305,12 @@ export async function renderMarkdownToPdf({
   const combinedCss = cssChunks.join("\n");
 
   const usesMermaid = /```mermaid/.test(markdown);
-  const mermaidScript = usesMermaid
-    ? `<script>${loadMermaidUmd()}</script>
-       <script>
-         window.mermaid.initialize({
-           startOnLoad: false,
-           theme: ${JSON.stringify(getMermaidThemeForDocumentTheme(theme))},
-           securityLevel: "loose"
-         });
-       </script>`
-    : "";
+  const mermaidPath = usesMermaid ? findMermaidScriptPath() : null;
+  if (usesMermaid && !mermaidPath) {
+    console.warn(
+      "[pdf] Markdown contains mermaid blocks but mermaid.min.js was not found at <cwd>/node_modules/mermaid/dist/mermaid.min.js — diagrams will render as raw text.",
+    );
+  }
 
   const html = `<!DOCTYPE html>
 <html>
@@ -296,7 +318,6 @@ export async function renderMarkdownToPdf({
     <meta charset="utf-8">
     <title>${escapeHtml(metadata?.title ?? DEFAULT_TITLE)}</title>
     <style>${combinedCss}</style>
-    ${mermaidScript}
   </head>
   <body>
     <div class="${wrapper}">
@@ -322,15 +343,28 @@ export async function renderMarkdownToPdf({
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
 
-    if (usesMermaid) {
-      await page.evaluate(async () => {
+    if (usesMermaid && mermaidPath) {
+      // Inject mermaid via Puppeteer's addScriptTag — this avoids reading and
+      // inlining the (~3MB) UMD ourselves, and avoids Next bundler issues with
+      // import.meta.url / createRequire that previously caused EBADF in prod.
+      await page.addScriptTag({ path: mermaidPath });
+      const mermaidTheme = getMermaidThemeForDocumentTheme(theme);
+      await page.evaluate(async (themeName: string) => {
         const m = (
           window as unknown as {
-            mermaid: { run: (opts?: unknown) => Promise<void> };
+            mermaid: {
+              initialize: (opts: unknown) => void;
+              run: (opts?: unknown) => Promise<void>;
+            };
           }
         ).mermaid;
+        m.initialize({
+          startOnLoad: false,
+          theme: themeName,
+          securityLevel: "loose",
+        });
         await m.run({ querySelector: "pre.mermaid" });
-      });
+      }, mermaidTheme);
       // Give layout one tick so SVGs settle before printing.
       await page.evaluate(
         () => new Promise<void>((r) => requestAnimationFrame(() => r())),
