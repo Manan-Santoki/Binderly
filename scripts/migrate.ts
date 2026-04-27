@@ -1,7 +1,34 @@
+import { existsSync, readFileSync } from "node:fs";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
 import postgres from "postgres";
+
+// Load .env.local / .env from the project root if present, so this script
+// matches the env Next.js loads for `next dev` / `next start`.
+function loadDotenv(file: string) {
+  const full = path.resolve(process.cwd(), file);
+  if (!existsSync(full)) return;
+  const text = readFileSync(full, "utf8");
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const eq = line.indexOf("=");
+    if (eq === -1) continue;
+    const key = line.slice(0, eq).trim();
+    let value = line.slice(eq + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    if (process.env[key] === undefined) process.env[key] = value;
+  }
+}
+
+loadDotenv(".env.local");
+loadDotenv(".env");
 
 async function main() {
   const url = process.env.DATABASE_URL;
