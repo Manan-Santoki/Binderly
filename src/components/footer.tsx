@@ -1,4 +1,4 @@
-import { Github, Heart } from "lucide-react";
+import { Github } from "lucide-react";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -6,10 +6,8 @@ export function Footer() {
   return (
     <footer className="w-full border-t bg-background">
       <div className="container flex flex-col items-center justify-between gap-4 px-4 py-6 sm:flex-row sm:px-6 lg:px-10">
-        <div className="flex items-center gap-2 text-muted-foreground text-sm">
-          <span>Built with</span>
-          <Heart className="size-4 fill-red-500 text-red-500" />
-          <span>using Next.js & Tailwind CSS</span>
+        <div className="text-muted-foreground text-sm">
+          Open source. No size caps. No watermarks.
         </div>
         <div className="flex items-center gap-4">
           <a
