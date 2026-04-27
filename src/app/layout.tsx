@@ -2,6 +2,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Montserrat } from "next/font/google";
+import Script from "next/script";
 import type { ReactNode } from "react";
 
 import { ThemeProvider } from "@/components/theme-provider";
@@ -9,6 +10,12 @@ import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 
 import "@/app/globals.css";
+
+// Tracking is opt-in via env var so self-hosters never send data anywhere.
+// Set NEXT_PUBLIC_RYBBIT_SITE_ID on your hosted deployment only.
+const RYBBIT_SITE_ID = process.env.NEXT_PUBLIC_RYBBIT_SITE_ID;
+const RYBBIT_SRC =
+  process.env.NEXT_PUBLIC_RYBBIT_SRC ?? "https://rybbit.msantoki.com/api/script.js";
 
 export const metadata: Metadata = {
   title: {
@@ -115,6 +122,14 @@ export default function RootLayout({
         </ThemeProvider>
         <Analytics />
         <SpeedInsights />
+        {RYBBIT_SITE_ID ? (
+          <Script
+            src={RYBBIT_SRC}
+            data-site-id={RYBBIT_SITE_ID}
+            strategy="afterInteractive"
+            defer
+          />
+        ) : null}
       </body>
     </html>
   );
