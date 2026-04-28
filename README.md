@@ -2,6 +2,8 @@
 
 A modern web application for converting Markdown to beautifully styled PDFs with live preview, custom theming, and instant export.
 
+https://github.com/user-attachments/assets/5a640eae-0e37-4b58-8ada-e71fde64d08f
+
 ## Features
 
 - **Live Markdown Editor**: Write and edit Markdown with real-time preview
