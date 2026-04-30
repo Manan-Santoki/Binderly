@@ -1,128 +1,179 @@
 # Binderly
 
-A modern web application for converting Markdown to beautifully styled PDFs with live preview, custom theming, and instant export.
+> Markdown rendered like GitHub. Exported like print.
+
+An open-source Markdown workbench: live preview, page-perfect PDF export, Mermaid diagrams in the PDF, GitHub-accurate themes, and shareable view-only links. No size caps. No watermarks.
+
+**🌐 Live demo:** https://binderly.msantoki.com/
 
 https://github.com/user-attachments/assets/5a640eae-0e37-4b58-8ada-e71fde64d08f
 
 ## Features
 
-- **Live Markdown Editor**: Write and edit Markdown with real-time preview
-- **GitHub Flavored Markdown**: Full support for tables, task lists, and more
-- **Custom Themes**: Choose from curated typography themes (Editorial Serif, Modern Neutral, Midnight Focus)
-- **Custom CSS**: Add your own CSS to align with your brand or design system
-- **Instant PDF Export**: Generate print-ready PDFs directly in your browser
-- **File Upload**: Import existing .md files for editing and conversion
-- **Metadata Control**: Set PDF title, author, and filename
-- **Word & Character Count**: Track document statistics in real-time
-- **Responsive Design**: Works seamlessly on desktop and mobile devices
+- **GitHub-accurate themes** — light + dark variants powered by the official [`github-markdown-css`](https://github.com/sindresorhus/github-markdown-css) Primer stylesheet. Your rendered Markdown matches `github.com`.
+- **Mermaid diagrams in the PDF** — sequence, flowchart, gantt, class, state. Rendered server-side via Puppeteer so they survive the trip into the export. Theme auto-pairs with the document theme.
+- **GitHub Flavored Markdown** — alerts (`> [!NOTE]`, `[!WARNING]`, `[!CAUTION]`, etc.), footnotes, task lists, tables with column alignment.
+- **Auto table of contents** + heading anchors using `github-slugger` for slug parity with GitHub itself.
+- **Page-perfect PDFs** — A4, page numbers in footer, `break-inside: avoid` on code blocks, tables, alerts, and Mermaid SVGs so nothing splits awkwardly. Optional rounded-card or full-bleed mode.
+- **Shareable view-only links** — click **Share**, get a public URL like `/v/<uuid>`. Backed by Postgres. Each click is an immutable snapshot.
+- **Custom CSS injection** for brand-matching, plus four curated typographic themes (GitHub Light/Dark, Editorial Serif, Modern Neutral, Midnight Focus).
+- **Privacy-first** — self-hosted instances ship `noindex` by default. Opt-in to indexing and analytics via env vars.
+- **Self-hostable** — Next.js + Puppeteer + Postgres. MIT-licensed.
 
-## Getting Started
+## Quick start
 
 ### Prerequisites
 
-- Node.js 22 or higher
-- pnpm 9.15.2 or higher
+- Node.js 22+
+- pnpm 9.15.2+
+- Postgres 14+ *(only required for the share-link feature; the editor + PDF export work without it)*
+- Docker *(optional, for the easiest Postgres setup)*
 
-### Installation
+### Install
 
 ```bash
-# Clone the repository
-git clone <your-repo-url>
-cd binderly
-
-# Install dependencies
+git clone https://github.com/Manan-Santoki/Binderly
+cd Binderly
 pnpm install
 ```
 
-### Development
+`pnpm install` downloads a Chromium binary for Puppeteer (~170 MB on first install).
+
+### Database (only if you want the Share button)
 
 ```bash
-# Start the development server
-pnpm dev
+docker run -d --name binderly-pg \
+  -p 5432:5432 \
+  -e POSTGRES_USER=binderly \
+  -e POSTGRES_PASSWORD=devpw \
+  -e POSTGRES_DB=binderly \
+  postgres:16-alpine
+
+cat > .env.local <<'EOF'
+DATABASE_URL=postgres://binderly:devpw@127.0.0.1:5432/binderly
+DATABASE_SSL=false
+EOF
+
+pnpm db:migrate
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
-
-### Production Build
+### Run
 
 ```bash
-# Build for production
-pnpm build
-
-# Start production server
-pnpm start
+pnpm dev          # development (turbopack, hot reload)
+# or
+pnpm build && pnpm start   # production
 ```
 
-## Usage
+Open http://localhost:3000.
 
-1. **Write Markdown**: Type or paste your Markdown content in the left editor panel
-2. **Upload Files**: Click "Upload .md" to import existing Markdown files
-3. **Choose a Theme**: Select from Editorial Serif, Modern Neutral, or Midnight Focus
-4. **Add Custom CSS**: Optionally add custom CSS to match your brand
-5. **Set Metadata**: Configure the PDF title, author, and filename
-6. **Preview**: See your styled document in real-time in the right preview panel
-7. **Export**: Click "Download PDF" to generate and download your PDF
+## Configuration
 
-## Technology Stack
+All env vars are optional (except `DATABASE_URL` if you use sharing). See [`.env.example`](./.env.example) for the canonical list.
 
-- **Framework**: Next.js 15.5
-- **Styling**: Tailwind CSS 4.1
-- **UI Components**: Custom components built with Radix UI primitives
-- **Markdown Rendering**: react-markdown with remark-gfm
-- **PDF Generation**: Puppeteer
-- **Icons**: Lucide React
-- **Notifications**: Sonner
+| Variable | Required for | Notes |
+| --- | --- | --- |
+| `DATABASE_URL` | Share links | Postgres connection string |
+| `DATABASE_SSL` | — | `false` (self-hosted), `require` (managed providers), default `prefer` |
+| `NEXT_PUBLIC_SITE_URL` | SEO on hosted instance | Set to your canonical URL to enable indexing, sitemap, canonical tag, JSON-LD. **Leave unset for private/internal deploys** — the app ships `noindex` by default. |
+| `NEXT_PUBLIC_RYBBIT_SITE_ID` | Analytics | Opt-in tracking. Unset → zero tracking JS loaded. |
+| `NEXT_PUBLIC_RYBBIT_SRC` | — | Override the analytics script URL |
 
-## Project Structure
+`NEXT_PUBLIC_*` vars are inlined at **build time**. Changes require a rebuild, not just a restart.
+
+## How it works
 
 ```
-├── src/
-│   ├── app/
-│   │   ├── api/pdf/          # PDF generation API endpoint
-│   │   ├── layout.tsx         # Root layout
-│   │   ├── page.tsx           # Main page
-│   │   └── globals.css        # Global styles
-│   ├── components/
-│   │   ├── pdf-workbench/     # Main editor component
-│   │   └── ui/                # Reusable UI components
-│   └── lib/
-│       ├── themes.ts          # Theme definitions
-│       ├── sample-markdown.ts # Sample content
-│       └── utils.ts           # Utility functions
-├── package.json
-└── README.md
+┌──────────────────┐     ┌─────────────────┐     ┌──────────────┐
+│  Workbench (UI)  │────▶│  /api/pdf       │────▶│  Puppeteer   │
+│  react-markdown  │     │  marked +       │     │  → A4 PDF    │
+│  remark-gfm      │     │  marked-alert + │     └──────────────┘
+│  remark-alert    │     │  mermaid UMD    │
+│  rehype-slug     │     │  injection      │
+└──────────────────┘     └─────────────────┘
+        │
+        │ Share button
+        ▼
+┌──────────────────┐     ┌─────────────────┐
+│  /api/share      │────▶│  Postgres       │
+│  (POST snapshot) │     │  shared_docs    │
+└──────────────────┘     └─────────────────┘
+        │
+        │ /v/[id]  (public read-only viewer)
+        ▼
+┌──────────────────┐
+│  SharedDocViewer │
+│  (same renderer  │
+│  as workbench)   │
+└──────────────────┘
+```
+
+Two markdown libraries are used deliberately:
+
+- **`react-markdown`** in the live preview — lots of plugins, runs in the browser, fast.
+- **`marked`** in the PDF render path — server-friendly, easier to swap renderers, integrates cleanly with Puppeteer.
+
+GFM alert plugins are paired across the two (`remark-github-blockquote-alert` for the preview, `marked-alert` for the PDF) so both emit the same `markdown-alert markdown-alert-{variant}` classes — one stylesheet covers both.
+
+## Project layout
+
+```
+src/
+├── app/
+│   ├── api/pdf/route.ts          # POST: render markdown -> PDF
+│   ├── api/share/route.ts        # POST: persist snapshot, return UUID
+│   ├── v/[id]/page.tsx           # public read-only viewer
+│   ├── layout.tsx                # metadata + JSON-LD
+│   ├── page.tsx                  # home — workbench + SEO landing
+│   ├── robots.ts                 # gated on NEXT_PUBLIC_SITE_URL
+│   └── sitemap.ts                # gated on NEXT_PUBLIC_SITE_URL
+├── components/
+│   ├── pdf-workbench/            # editor, mermaid, code-block, toc
+│   ├── shared-doc-viewer.tsx     # used by /v/[id]
+│   ├── seo-landing.tsx           # SSR feature/FAQ block
+│   └── ui/                       # Radix-based primitives
+└── lib/
+    ├── pdf.ts                    # marked + Puppeteer pipeline
+    ├── themes.ts                 # theme registry + helpers
+    ├── db.ts                     # Postgres queries
+    ├── seo.ts                    # hosted-mode toggle + constants
+    ├── github-markdown-themes/   # bundled Primer CSS
+    └── highlight-themes/         # bundled highlight.js CSS
+migrations/0001_shared_documents.sql
+scripts/migrate.ts
 ```
 
 ## Customization
 
-### Adding New Themes
+### Add a theme
 
-Edit `src/lib/themes.ts` to add new theme definitions:
+See [`src/lib/themes.ts`](./src/lib/themes.ts). Existing themes are CSS-variable based and live in `themeTokens`. The Primer-based themes (`github-light`, `github-dark`) wrap the content in `<div class="markdown-body">`; the rest use `<div class="md-theme">`. Adding a new CSS-variable theme is a few lines — see [CONTRIBUTING.md](./CONTRIBUTING.md#adding-a-theme).
 
-```typescript
-const themeTokens = {
-  yourTheme: {
-    label: "Your Theme Name",
-    description: "Theme description",
-    vars: `
-      .md-theme {
-        --md-bg: #ffffff;
-        --md-text: #000000;
-        // ... other CSS variables
-      }
-    `,
-  },
-};
-```
+### Modify PDF styles
 
-### Modifying PDF Styles
+[`src/lib/pdf.ts`](./src/lib/pdf.ts) is the server-side render path. Page break controls, the page-numbered footer template, and theme-aware CSS overrides all live there.
 
-The PDF generation uses the same CSS as the live preview. Modify the theme CSS variables in `src/lib/themes.ts` to change the PDF output styling.
+## Hosting
 
-## License
+Standard Next.js hosting story — Node 22+, persistent Postgres, and a process supervisor of your choice. The PDF route uses Puppeteer's bundled Chromium and works in containers with `--no-sandbox` (already configured).
 
-This project is open source and available under the MIT License.
+For SEO on your hosted instance, set `NEXT_PUBLIC_SITE_URL=https://your-domain` and rebuild. That switches the app into hosted mode (sitemap, canonical, indexable robots, JSON-LD with the right URL).
+
+## Roadmap
+
+Open to suggestions. Things on my list:
+
+- [ ] Editable share links (currently snapshots only)
+- [ ] Math support (KaTeX/MathJax)
+- [ ] Diagram alternatives — PlantUML, D2, Graphviz
+- [ ] Theme builder UI
+
+[Open an issue](https://github.com/Manan-Santoki/Binderly/issues) if you want to discuss any of these or pitch your own.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+PRs welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+## License
+
+[MIT](./LICENSE) © 2026 Manan Santoki
