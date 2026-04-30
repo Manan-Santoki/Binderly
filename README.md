@@ -76,8 +76,8 @@ All env vars are optional (except `DATABASE_URL` if you use sharing). See [`.env
 | `DATABASE_URL` | Share links | Postgres connection string |
 | `DATABASE_SSL` | — | `false` (self-hosted), `require` (managed providers), default `prefer` |
 | `NEXT_PUBLIC_SITE_URL` | SEO on hosted instance | Set to your canonical URL to enable indexing, sitemap, canonical tag, JSON-LD. **Leave unset for private/internal deploys** — the app ships `noindex` by default. |
-| `NEXT_PUBLIC_RYBBIT_SITE_ID` | Analytics | Opt-in tracking. Unset → zero tracking JS loaded. |
-| `NEXT_PUBLIC_RYBBIT_SRC` | — | Override the analytics script URL |
+| `NEXT_PUBLIC_ANALYTICS_SRC` | Analytics | Script URL for a privacy-friendly analytics provider (Plausible/Umami-style). Both vars must be set; otherwise zero tracking JS loads. |
+| `NEXT_PUBLIC_ANALYTICS_SITE_ID` | Analytics | Site identifier passed via `data-site-id` |
 
 `NEXT_PUBLIC_*` vars are inlined at **build time**. Changes require a rebuild, not just a restart.
 

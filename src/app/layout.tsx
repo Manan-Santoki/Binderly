@@ -19,11 +19,11 @@ import { cn } from "@/lib/utils";
 
 import "@/app/globals.css";
 
-// Tracking is opt-in via env var so self-hosters never send data anywhere.
-// Set NEXT_PUBLIC_RYBBIT_SITE_ID on your hosted deployment only.
-const RYBBIT_SITE_ID = process.env.NEXT_PUBLIC_RYBBIT_SITE_ID;
-const RYBBIT_SRC =
-  process.env.NEXT_PUBLIC_RYBBIT_SRC ?? "https://rybbit.msantoki.com/api/script.js";
+// Tracking is opt-in via env vars so self-hosters never send data anywhere.
+// Both NEXT_PUBLIC_ANALYTICS_SRC and NEXT_PUBLIC_ANALYTICS_SITE_ID must be set
+// on your hosted deployment for the analytics script to be injected.
+const ANALYTICS_SITE_ID = process.env.NEXT_PUBLIC_ANALYTICS_SITE_ID;
+const ANALYTICS_SRC = process.env.NEXT_PUBLIC_ANALYTICS_SRC;
 
 export const metadata: Metadata = {
   metadataBase: SITE_URL ? new URL(SITE_URL) : undefined,
@@ -122,10 +122,10 @@ export default function RootLayout({
         </ThemeProvider>
         <Analytics />
         <SpeedInsights />
-        {RYBBIT_SITE_ID ? (
+        {ANALYTICS_SITE_ID && ANALYTICS_SRC ? (
           <Script
-            src={RYBBIT_SRC}
-            data-site-id={RYBBIT_SITE_ID}
+            src={ANALYTICS_SRC}
+            data-site-id={ANALYTICS_SITE_ID}
             strategy="afterInteractive"
             defer
           />
