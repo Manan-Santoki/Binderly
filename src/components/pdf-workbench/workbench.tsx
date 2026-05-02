@@ -4,9 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import { remarkAlert } from "remark-github-blockquote-alert";
 import rehypeRaw from "rehype-raw";
 import rehypeSlug from "rehype-slug";
+import rehypeKatex from "rehype-katex";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import { toast } from "sonner";
 import {
@@ -51,12 +53,15 @@ import {
   type ThemeKey,
 } from "@/lib/themes";
 import { alertCss } from "@/lib/alert-css";
+import { katexCss } from "@/lib/katex-css";
 import { sampleMarkdown } from "@/lib/sample-markdown";
 import { MermaidDiagram } from "./mermaid-diagram";
 import { CodeBlock } from "./code-block";
 import { TableOfContents } from "./toc";
 
 const previewExtraCss = `
+${katexCss}
+
 ${alertCss}
 
 .code-block-wrapper {
@@ -667,10 +672,11 @@ export function PdfWorkbench() {
                     <style>{previewCss}</style>
                     <div className={wrapperClass}>
                       <ReactMarkdown
-                        remarkPlugins={[remarkGfm, remarkAlert]}
+                        remarkPlugins={[remarkGfm, remarkMath, remarkAlert]}
                         rehypePlugins={[
                           rehypeRaw,
                           rehypeSlug,
+                          rehypeKatex,
                           [rehypeAutolinkHeadings, { behavior: "wrap" }],
                         ]}
                         components={markdownComponents}

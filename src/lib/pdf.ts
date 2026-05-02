@@ -5,6 +5,7 @@ import path from "node:path";
 import GithubSlugger from "github-slugger";
 import { marked } from "marked";
 import markedAlert from "marked-alert";
+import markedKatex from "marked-katex-extension";
 import puppeteer from "puppeteer";
 
 import type { ThemeKey } from "@/lib/themes";
@@ -15,6 +16,7 @@ import {
   getWrapperClass,
 } from "@/lib/themes";
 import { alertCss } from "./alert-css";
+import { katexCss } from "./katex-css";
 import { loadHljsCss } from "./highlightCss";
 import { markdownBaseCss } from "./markdown-base.css";
 
@@ -69,6 +71,7 @@ function configureMarkedOnce() {
 
   marked.setOptions({ breaks: true, gfm: true });
   marked.use(markedAlert());
+  marked.use(markedKatex({ throwOnError: false, nonStandard: true }));
   marked.use({
     renderer: {
       code({ text, lang }) {
@@ -286,6 +289,7 @@ export async function renderMarkdownToPdf({
         hljsCss,
         themeCss,
         alertCss,
+        katexCss,
         pdfTocCss,
         pdfCodeBlockCss,
         pdfPageBreakCss,
@@ -296,6 +300,7 @@ export async function renderMarkdownToPdf({
         hljsCss,
         themeCss,
         alertCss,
+        katexCss,
         pdfTocCss,
         pdfCodeBlockCss,
         pdfPageBreakCss,
